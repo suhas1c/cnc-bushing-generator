@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNC Bolt-Hole Circle Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f6f9;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .panel {
+            flex: 1;
+            min-width: 320px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .form-row {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-calc { background-color: #ffc107; color: #212529; }
+        .btn-calc:hover { background-color: #ba8b00; }
+        textarea {
+            width: 100%;
+            height: 440px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            padding: 10px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" style="display: inline-block; margin-bottom: 15px; font-weight: bold; color: #0056b3; text-decoration: none;">← Back to Dashboard Hub</a>
+    <h1 style="color: #ba8b00;">🌀 VMC Bolt-Hole Circle Grid Matrix</h1>
+
+    <div class="container">
+        <!-- LEFT INPUT PANEL -->
+        <div class="panel">
+            <h2>Pattern Parameters</h2>
+            
+            <div class="form-row">
+                <label>Center X Coordinate (X0):</label>
+                <input type="number" id="txtCenterX" value="0.0" step="0.001">
+            </div>
+
+            <div class="form-row">
+                <label>Center Y Coordinate (Y0):</label>
+                <input type="number" id="txtCenterY" value="0.0" step="0.001">
+            </div>
+
+            <div class="form-row">
+                <label>Pitch Circle Diameter (PCD) mm:</label>
+                <input type="number" id="txtPCD" value="100.0" step="0.1">
+            </div>
+
+            <div class="form-row">
+                <label>Number of Holes:</label>
+                <input type="number" id="txtHoles" value="6" step="1">
+            </div>
+
+            <div class="form-row">
+                <label>Starting Angle (Degrees):</label>
+                <input type="number" id="txtStartAngle" value="0.0" step="0.1">
+            </div>
+
+            <div class="form-row">
+                <label>Canned Cycle Mode:</label>
+                <select id="cmbCycle">
+                    <option value="G81">G81 (Standard Drilling)</option>
+                    <option value="G83">G83 (Deep Peck Drilling)</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label>Drilling Depth (Z-):</label>
+                <input type="number" id="txtDepth" value="15.0" step="0.1">
+            </div>
+
+            <div class="form-row">
+                <label>Feed Rate (F) mm/min:</label>
+                <input type="number" id="txtFeed" value="120">
+            </div>
+
+            <button class="btn-calc" onclick="calculateBoltCircle()">Generate VMC Matrix</button>
+        </div>
+
+        <!-- RIGHT OUTPUT PANEL -->
+        <div class="panel">
+            <h2>Live G-Code Preview</h2>
+            <textarea id="txtGCode" readonly placeholder="Fanuc VMC drilling coordinates will generate here..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Keep empty initialization if needed
+        });
+
+        function calculateBoltCircle() {
+            var cx = parseFloat(document.getElementById('txtCenterX').value);
+            var cy = parseFloat(document.getElementById('txtCenterY').value);
+            var pcd = parseFloat(document.getElementById('txtPCD').value);
+            var numHoles = parseInt(document.getElementById('txtHoles').value);
+            var startAngle = parseFloat(document.getElementById('txtStartAngle').value);
+            var cycle = document.getElementById('cmbCycle').value;
+            var depth = parseFloat(document.getElementById('txtDepth').value);
+            var feed = parseFloat(document.getElementById('txtFeed').value);
+
+            if (isNaN(cx) || isNaN(cy) || isNaN(pcd) || isNaN(numHoles) || pcd <= 0 || numHoles <= 0) {
+                alert("Error: Please check inputs. PCD and number of holes must be greater than zero.");
+                return;
+            }
+
+            var radius = pcd / 2.0;
+            var angleIncrement = 360.0 / numHoles;
+
+            var code = "%\nO2002 (VMC BOLT HOLE PATTERN);\n";
+            code += "(PCD: " + pcd + "mm, HOLES: " + numHoles + ", START ANGLE: " + startAngle + ");\n";
+            code += "G17 G21 G40 G80 G90 (PLANE, MM, COMP CANCEL, CANNED CANCEL, ABS);\n";
+            code += "T04 M06 (SELECT DRILL);\n";
+            code += "G54 G00 X" + cx.toFixed(3) + " Y" + cy.toFixed(3) + " S1200 M03 (POSITION CENTER, START);\n";
+            code += "G43 H04 Z10.0 M08 (TOOL LENGTH COMP, COOLANT ON);\n\n";
+
+            code += "(--- DRILLING PATTERN START ---);\n";
+
+            // Trigonometry Loop to calculate exact polar coordinates
+            for (var i = 0; i < numHoles; i++) {
+                var currentAngle = startAngle + (i * angleIncrement);
+                // Convert degrees to radians for JavaScript Math functions
+                var radians = currentAngle * (Math.PI / 180.0);
+
+                var xPos = cx + (radius * Math.cos(radians));
+                var yPos = cy + (radius * Math.sin(radians));
+
+                if (i === 0) {
+                    // First hole initiates the canned cycle line
+                    if (cycle === "G81") {
+                        code += "G81 X" + xPos.toFixed(3) + " Y" + yPos.toFixed(3) + " Z-" + depth.toFixed(1) + " R2.0 F" + feed + ";\n";
+                    } else {
+                        code += "G83 X" + xPos.toFixed(3) + " Y" + yPos.toFixed(3) + " Z-" + depth.toFixed(1) + " Q4.0 R2.0 F" + feed + " (Q=4mm PECK);\n";
+                    }
+                } else {
+                    // Subsequent holes track modally using coordinates only
+                    code += "X" + xPos.toFixed(3) + " Y" + yPos.toFixed(3) + " (HOLE " + (i + 1) + " AT " + currentAngle.toFixed(1) + " DEG);\n";
+                }
+            }
+
+            code += "G80 G00 Z25.0 M09 (CANCEL CANNED CYCLE, COOLANT OFF);\n";
+            code += "G28 G91 Z0.0 (HOME Z AXIS);\n";
+            code += "M30 (PROGRAM END);\n%\n";
+
+            document.getElementById('txtGCode').value = code;
+        }
+    </script>
+</body>
+</html>
