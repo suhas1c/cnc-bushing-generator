@@ -78,6 +78,7 @@
             background-color: #1e1e1e;
             color: #d4d4d4;
             box-sizing: border-box;
+            resize: vertical;
         }
     </style>
 </head>
@@ -139,7 +140,7 @@
             
             <div class="result-box">
                 <div class="result-row"><span>Spindle Speed (RPM):</span><span id="lblRPM">0</span></div>
-                <div class="result-row"><span>Feed Rate (mm/min or mm/rev):</span><span id="lblFeed">0</span></div>
+                <div class="result-row"><span>Feed Rate:</span><span id="lblFeed">0</span></div>
                 <div class="result-row"><span>Metric Surface Speed (SMM):</span><span id="lblSMM">0</span></div>
             </div>
 
@@ -150,7 +151,7 @@
 
     <script>
         // Preset Databank mapping standard surface speeds and chip loads
-        const presets = {
+        var presets = {
             aluminum: { sfm: 800, ipt: 0.006 },
             mildsteel: { sfm: 350, ipt: 0.004 },
             stainless: { sfm: 150, ipt: 0.003 },
@@ -172,49 +173,45 @@
             var ipt = parseFloat(document.getElementById('txtIPT').value);
             var flutes = parseInt(document.getElementById('txtFlutes').value);
 
-            // Foolproof Guardrails
             if (isNaN(dia) || isNaN(sfm) || isNaN(ipt) || dia <= 0 || sfm <= 0 || ipt <= 0) {
-                alert("Error: Please check inputs. Dimensions must be greater than zero."); return;
+                alert("Error: Please check inputs. Dimensions must be greater than zero."); 
+                return;
             }
 
-            // --- SHOP MATHEMATICS ENGINES ---
-            // 1. Calculate Spindle Speed (RPM)
-            var rpm = (sfm * 3.82) / (dia / 25.4); // Converts metric dia to inches dynamically
+            // RPM Math (Converts metric diameter to inches dynamically via / 25.4)
+            var rpm = (sfm * 3.82) / (dia / 25.4); 
             rpm = Math.round(rpm);
 
-            // 2. Calculate Metric Surface Speed (SMM - Surface Metres Per Min)
-            var smm = (sfm * 0.3048);
-            smm = Math.round(smm);
+            // SMM Math
+            var smm = Math.round(sfm * 0.3048);
 
             var feedRate = 0;
-            let codeBlock = "";
+            var codeBlock = "";
 
             if (opType === "Milling") {
                 // Milling Feed Rate = RPM * Flutes * (Inch Chip Load * 25.4 to output metric mm/min)
-                feedRate = rpm * flutes * (ipt * 25.4);
-                feedRate = Math.round(feedRate);
-
+                feedRate = Math.round(rpm * flutes * (ipt * 25.4));
                 document.getElementById('lblFeed').innerText = feedRate + " mm/min (G94)";
                 
+                // PERFECTLY FIXED: Replaced loose template variables with clean concat operators
                 codeBlock += "(--- FANUC VMC MILLING BLOCK ---);\n";
-                codeBlock += `G90 G94 G21 (ABS, FEED PER MIN, MM);\n`;
-                codeBlock += `S${rpm} M03 (START SPINDLE);\n`;
-                codeBlock += `G01 X0.0 Y0.0 F${feedRate} (LINEAR CUT WITH CALCULATED FEED);\n`;
+                codeBlock += "G90 G94 G21 (ABS, FEED PER MIN, MM);\n";
+                codeBlock += "S" + rpm + " M03 (START SPINDLE);\n";
+                codeBlock += "G01 X0.0 Y0.0 F" + feedRate + " (LINEAR CUT);\n";
             } else {
                 // Lathe Turning Feed Rate = Feed per rev directly (IPR * 25.4 to output metric mm/rev)
-                feedRate = ipt * 25.4;
-                feedRate = feedRate.toFixed(3);
-
+                feedRate = (ipt * 25.4).toFixed(3);
                 document.getElementById('lblFeed').innerText = feedRate + " mm/rev (G99)";
                 
+                // PERFECTLY FIXED: Replaced loose template variables with clean concat operators
                 codeBlock += "(--- FANUC LATHE TURNING BLOCK ---);\n";
-                codeBlock += `G18 G21 G99 (PLAN, MM, FEED PER REV);\n`;
-                codeBlock += `G50 S2500 (MAX RPM LIMIT);\n`;
-                codeBlock += `G96 S${smm} M03 (CONSTANT SURFACE SPEED SMM);\n`;
-                codeBlock += `G01 Z-50.0 F${feedRate} (TURN WITH CALCULATED FEED PER REV);\n`;
+                codeBlock += "G18 G21 G99 (PLAN, MM, FEED PER REV);\n";
+                codeBlock += "G50 S2500 (MAX RPM LIMIT);\n";
+                codeBlock += "G96 S" + smm + " M03 (CONSTANT SURFACE SPEED);\n";
+                codeBlock += "G01 Z-50.0 F" + feedRate + " (TURN CUT);\n";
             }
 
-            // Output data back to screen objects
+            // Output values directly back to screen elements
             document.getElementById('lblRPM').innerText = rpm;
             document.getElementById('lblSMM').innerText = smm + " m/min";
             document.getElementById('txtGCode').value = codeBlock;
