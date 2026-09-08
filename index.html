@@ -3,191 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal Fanuc CNC Bushing Generator</title>
+    <title>GHS CNC Machining Toolbox Hub</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
             background-color: #f4f6f9;
+            color: #333;
         }
-        .container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            max-width: 1100px;
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: #0056b3;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header h1 { margin: 0; font-size: 28px; }
+        .header p { margin: 5px 0 0 0; opacity: 0.9; font-size: 16px; }
+        
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            max-width: 1000px;
             margin: 0 auto;
         }
-        .panel {
-            flex: 1;
-            min-width: 320px;
+        .card {
             background: white;
-            padding: 20px;
             border-radius: 8px;
+            padding: 25px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-top: 5px solid #ccc;
         }
-        .form-row {
-            margin-bottom: 12px;
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
         }
-        label {
-            display: block;
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
-        input, select {
-            width: 100%;
-            padding: 8px;
-            font-size: 15px;
-            font-weight: bold;
-            border: 2px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        input:disabled {
-            background-color: #e9ecef;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
+        .card.turning { border-top-color: #0056b3; }
+        .card.milling { border-top-color: #ffc107; }
+        .card.calculator { border-top-color: #28a745; }
+        
+        .card h2 { margin-top: 0; color: #333; font-size: 22px; }
+        .card p { color: #666; font-size: 15px; line-height: 1.4; margin-bottom: 20px; }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 20px;
             font-size: 16px;
             font-weight: bold;
             color: white;
-            border: none;
+            text-decoration: none;
             border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
+            transition: background 0.2s;
         }
-        .btn-gen { background-color: #0056b3; }
-        .btn-dl { background-color: #28a745; }
-        textarea {
-            width: 100%;
-            height: 480px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 13px;
-            padding: 10px;
-            background-color: #1e1e1e;
-            color: #d4d4d4;
-            box-sizing: border-box;
-        }
+        .btn-turning { background-color: #0056b3; }
+        .btn-turning:hover { background-color: #004085; }
+        .btn-milling { background-color: #e0a800; color: #212529; }
+        .btn-milling:hover { background-color: #c69500; }
+        .btn-calc { background-color: #28a745; }
+        .btn-calc:hover { background-color: #218838; }
     </style>
 </head>
 <body>
 
-    <h1 style="text-align: center; color: #0056b3;">Universal Fanuc Lathe Bushing Generator</h1>
+    <div class="header">
+        <h1>GHS CNC Machining Toolbox Hub</h1>
+        <p>Production-Ready G-Code Generators & Calculators</p>
+    </div>
 
-    <div class="container">
-        <!-- LEFT INPUT PANEL -->
-        <div class="panel">
-            <h2>Parameters</h2>
-            
-            <div class="form-row">
-                <label>Bushing Type:</label>
-                <select id="cmbType" onchange="toggleFlange()">
-                    <option value="Plain Bushing">Plain Bushing</option>
-                    <option value="Flanged Bushing">Flanged Bushing</option>
-                </select>
+    <div class="grid-container">
+        <!-- TURNING CARD -->
+        <div class="card turning">
+            <div>
+                <h2>⚡ Lathe Turning Center</h2>
+                <p>Generate parametric Fanuc lathe toolpaths using G71 roughing cycles, G70 finish sweeps, and G74 peck drilling configurations.</p>
             </div>
-
-            <div class="form-row"><label>Target OD (mm):</label><input type="number" id="txtOD" value="40.0"></div>
-            <div class="form-row"><label>Target ID (mm):</label><input type="number" id="txtID" value="20.0"></div>
-            <div class="form-row"><label>Raw Stock Dia (mm):</label><input type="number" id="txtStock" value="65.0"></div>
-            <div class="form-row"><label>U-Drill Dia (mm):</label><input type="number" id="txtDrill" value="18.0"></div>
-            <div class="form-row"><label>Total Length (mm):</label><input type="number" id="txtLength" value="50.0"></div>
-            <div class="form-row"><label>45-Deg Chamfer (mm):</label><input type="number" id="txtChamfer" value="1.5"></div>
-            <div class="form-row"><label>Flange Dia (mm):</label><input type="number" id="txtFlangeDia" value="60.0" disabled></div>
-            <div class="form-row"><label>Flange Thickness (mm):</label><input type="number" id="txtFlangeThick" value="12.0" disabled></div>
-
-            <button class="btn-gen" onclick="runGenerator()">Generate G-Code</button>
-            <button class="btn-dl" onclick="downloadNC()">Download .NC File</button>
+            <a href="turning-bushing.html" class="btn btn-turning">Open Turning Tools</a>
         </div>
 
-        <!-- RIGHT PREVIEW PANEL -->
-        <div class="panel">
-            <h2>Live G-Code Preview</h2>
-            <textarea id="txtPreview" readonly placeholder="Your G-code will appear here..."></textarea>
+        <!-- MILLING CARD -->
+        <div class="card milling">
+            <div>
+                <h2>🌀 VMC Milling Center</h2>
+                <p>Generate absolute toolpaths for vertical machining centers, including G12/G13 circular interpolation pocketing and bolt-hole grids.</p>
+            </div>
+            <a href="#" class="btn btn-milling" style="opacity: 0.6; cursor: not-allowed;">Coming Soon</a>
+        </div>
+
+        <!-- CALCULATORS CARD -->
+        <div class="card calculator">
+            <div>
+                <h2>📊 Speeds & Feeds Engine</h2>
+                <p>Instantly calculate required spindle speeds (RPM), surface speeds (SFM/SMM), and chip load feed rates for diverse tooling materials.</p>
+            </div>
+            <a href="#" class="btn btn-calc" style="opacity: 0.6; cursor: not-allowed;">Coming Soon</a>
         </div>
     </div>
 
-    <script>
-        function toggleFlange() {
-            var isFlanged = document.getElementById('cmbType').value === "Flanged Bushing";
-            document.getElementById('txtFlangeDia').disabled = !isFlanged;
-            document.getElementById('txtFlangeThick').disabled = !isFlanged;
-        }
-
-        function runGenerator() {
-            var type = document.getElementById('cmbType').value;
-            var od = parseFloat(document.getElementById('txtOD').value);
-            var id = parseFloat(document.getElementById('txtID').value);
-            var stock = parseFloat(document.getElementById('txtStock').value);
-            var drill = parseFloat(document.getElementById('txtDrill').value);
-            var len = parseFloat(document.getElementById('txtLength').value);
-            var chamf = parseFloat(document.getElementById('txtChamfer').value);
-            
-            var fDia = !document.getElementById('txtFlangeDia').disabled ? parseFloat(document.getElementById('txtFlangeDia').value) : 0;
-            var fThick = !document.getElementById('txtFlangeThick').disabled ? parseFloat(document.getElementById('txtFlangeThick').value) : 0;
-
-            // Guardrails
-            if (od <= 0 || id <= 0 || stock <= 0 || drill <= 0 || len <= 0 || chamf < 0) {
-                alert("All standard dimensions must be greater than zero."); return;
-            }
-            if (id >= od) { alert("Inside Diameter cannot exceed Outside Diameter."); return; }
-            if (drill >= id) { alert("Drill Diameter must be smaller than the finished internal hole."); return; }
-            if (chamf >= (od - id) / 2.0) { alert("Chamfer is too large for this wall thickness."); return; }
-
-            if (type === "Flanged Bushing") {
-                if (fDia <= od) { alert("Flange Diameter must be larger than Bushing OD."); return; }
-                if (fThick >= len) { alert("Flange Thickness cannot exceed Total Length."); return; }
-                if (stock < fDia) { alert("Raw Stock must be equal to or larger than Flange Diameter."); return; }
-            } else {
-                if (stock < od) { alert("Raw Stock must be equal to or larger than Target OD."); return; }
-            }
-
-            // G-code construction engine
-            let sb = "%\nO1007 (WEB BUSHING ENGINE);\n";
-            sb += `(TYPE: ${type.toUpperCase()});\n`;
-            sb += `(OD: ${od}mm, ID: ${id}mm, STOCK: ${stock}mm, LENGTH: ${len}mm);\n`;
-            if (type === "Flanged Bushing") {
-                sb += `(FLANGE DIA: ${fDia}mm, FLANGE THICKNESS: ${fThick}mm);\n`;
-            }
-            sb += "G18 G21 G40 G99 G54;\n\n";
-            
-            // Tool 1: OD
-            sb += "(--- TOOL 1: OD ROUGH & FINISH ---);\nT0101;\nG50 S2000;\nG96 S180 M03;\nG00 X" + (stock + 2.0) + " Z2.0 M08;\n";
-            sb += "G01 Z0.0 F0.25;\nX-1.6 F0.15;\nG00 X" + (stock + 2.0) + " Z2.0;\n\n";
-            sb += "G71 U2.0 R0.5;\nG71 P10 Q20 U0.4 W0.1 F0.25;\n";
-            
-            let odChamfStart = od - (2.0 * chamf);
-            if (type === "Plain Bushing") {
-                sb += "N10 G00 G42 X" + odChamfStart + ";\nG01 Z0.0 F0.15;\n";
-                sb += `X${od} Z-${chamf};\nZ-${len};\nX${stock + 2.0};\n`;
-            } else {
-                sb += "N10 G00 G42 X" + odChamfStart + ";\nG01 Z0.0 F0.15;\n";
-                sb += `X${od} Z-${chamf};\nZ-${len - fThick};\nX${fDia};\nZ-${len};\nX${stock + 2.0};\n`;
-            }
-            sb += "N20 G00 G40 Z2.0;\n\nG70 P10 Q20 F0.12;\nG28 U0.0 W0.0 M09;\nM05;\n\n";
-
-            // Tool 2: Drilling
-            sb += "(--- TOOL 2: SOLID CORE DRILLING ---);\nT0202;\nG28 U0.0 W0.0;\nG97 S1000 M03;\nG00 X0.0 Z5.0 M08;\nG74 R1.0;\nG74 Z-" + (len + 3.0) + " Q5000 F0.1;\nG00 Z5.0;\nG28 U0.0 W0.0 M09;\nM05;\n\n";
-
-            // Tool 3: Boring Bar
-            sb += `(--- TOOL 3: ID BORING BAR ---);\nT0303;\nG50 S2000;\nG96 S150 M03;\nG00 X${drill} Z2.0 M08;\n\nG71 U1.5 R0.5;\nG71 P30 Q40 U-0.4 W0.05 F0.2;\n`;
-            let idChamfStart = id + (2.0 * chamf);
-            sb += "N30 G00 G41 X" + idChamfStart + ";\nG01 Z0.0 F0.1;\n";
-            sb += `X${id} Z-${chamf};\nZ-${len};\nX${drill};\nN40 G00 G40 Z2.0;\n\nG70 P30 Q40 F0.1;\nG28 U0.0 W0.0 M09;\nM05;\nM30;\n%\n`;
-
-            document.getElementById('txtPreview').value = sb;
-        }
-
-        function downloadNC() {
-            var text = document.getElementById('txtPreview').value;
-            if (!text) { alert("Generate G-code first!"); return; }
-            var blob = new Blob([text], { type: "text/plain" });
-            var link = document.createElement("a");
-            link.download = "BushingBore.nc";
-            link.href = window.URL.createObjectURL(blob);
-            link.click();
-        }
-    </script>
 </body>
 </html>
