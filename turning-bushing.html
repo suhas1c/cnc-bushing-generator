@@ -68,6 +68,7 @@
             background-color: #1e1e1e;
             color: #d4d4d4;
             box-sizing: border-box;
+            resize: vertical;
         }
     </style>
 </head>
@@ -144,19 +145,19 @@
                 if (stock < od) { alert("Raw Stock must be equal to or larger than Target OD."); return; }
             }
 
-            // Macro Variable Setup
-            let sb = "%\nO1007 (FANUC VARIABLE BUSHING);\n";
+            // FIXED: Standard safe string structures throughout
+            var sb = "%\nO1007 (FANUC VARIABLE BUSHING);\n";
             sb += "(-----------------------------------------);\n";
-            sb += `(TYPE: ${type.toUpperCase()});\n`;
-            sb += `#101 = ${od.toFixed(3)}  (TARGET OUTSIDE DIA - OD)\n`;
-            sb += `#102 = ${id.toFixed(3)}  (TARGET INSIDE DIA - ID)\n`;
-            sb += `#103 = ${stock.toFixed(3)}  (RAW STOCK DIA)\n`;
-            sb += `#104 = ${drill.toFixed(3)}  (U-DRILL DIA)\n`;
-            sb += `#105 = ${len.toFixed(3)}  (TOTAL BUSHING LENGTH)\n`;
-            sb += `#106 = ${chamf.toFixed(3)}  (45-DEGREE CHAMFER SIZE)\n`;
+            sb += "(TYPE: " + type.toUpperCase() + ");\n";
+            sb += "#101 = " + od.toFixed(3) + "  (TARGET OUTSIDE DIA - OD)\n";
+            sb += "#102 = " + id.toFixed(3) + "  (TARGET INSIDE DIA - ID)\n";
+            sb += "#103 = " + stock.toFixed(3) + "  (RAW STOCK DIA)\n";
+            sb += "#104 = " + drill.toFixed(3) + "  (U-DRILL DIA)\n";
+            sb += "#105 = " + len.toFixed(3) + "  (TOTAL BUSHING LENGTH)\n";
+            sb += "#106 = " + chamf.toFixed(3) + "  (45-DEGREE CHAMFER SIZE)\n";
             if (type === "Flanged Bushing") {
-                sb += `#107 = ${fDia.toFixed(3)}  (FLANGE DIA)\n`;
-                sb += `#108 = ${fThick.toFixed(3)}  (FLANGE THICKNESS)\n`;
+                sb += "#107 = " + fDia.toFixed(3) + "  (FLANGE DIA)\n";
+                sb += "#108 = " + fThick.toFixed(3) + "  (FLANGE THICKNESS)\n";
             }
             sb += "(-----------------------------------------);\n\n";
             
@@ -171,7 +172,6 @@
             sb += "G71 U2.0 R0.5;\n";
             sb += "G71 P10 Q20 U0.4 W0.1 F0.25 (ROUGH CYCLE SELECTION);\n";
             
-            // Profile track for G71/G70
             if (type === "Plain Bushing") {
                 sb += "N10 G00 G42 X[#101 - [2.0 * #106]];\n";
                 sb += "G01 Z0.0 F0.15;\n";
@@ -210,11 +210,11 @@
             sb += "T0808;\nG97 S1000 M03 (FIXED RPM DRILLING);\n";
             sb += "G00 X0.0 Z5.0 M08;\n";
             sb += "G74 R1.0;\n";
-            sb += "G74 Z-[#105 + 3.0] Q5000 F0.1 (G74 PECK CORE CORE);\n";
+            sb += "G74 Z-[#105 + 3.0] Q5000 F0.1 (G74 PECK CORE);\n";
             sb += "G00 Z5.0;\n";
             sb += "G28 U0.0 W0.0 M09;\nM05;\n\n";
 
             // TOOL 9: ID Boring Bar (T0909)
             sb += "(--- TOOL 9: ID BORING BAR ---);\n";
             sb += "T0909;\nG50 S2000;\nG96 S150 M03;\n";
-            sb += "G00 X#104 Z2.0 M08 (RAPID POSITION INSIDE CORE);\n\n";
+            sb += "G00 X" + drill + " Z2.0 M08 (RAPID POSITION INSIDE CORE);\n\n";
