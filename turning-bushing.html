@@ -118,49 +118,49 @@
         }
 
         function runGenerator() {
-            var type = document.getElementById('cmbType').value;
-            var od = parseFloat(document.getElementById('txtOD').value);
-            var id = parseFloat(document.getElementById('txtID').value);
-            var stock = parseFloat(document.getElementById('txtStock').value);
-            var drill = parseFloat(document.getElementById('txtDrill').value);
-            var len = parseFloat(document.getElementById('txtLength').value);
-            var chamf = parseFloat(document.getElementById('txtChamfer').value);
+            var inputType = document.getElementById('cmbType').value;
+            var inputOD = parseFloat(document.getElementById('txtOD').value);
+            var inputID = parseFloat(document.getElementById('txtID').value);
+            var inputStock = parseFloat(document.getElementById('txtStock').value);
+            var inputDrill = parseFloat(document.getElementById('txtDrill').value);
+            var inputLength = parseFloat(document.getElementById('txtLength').value);
+            var inputChamfer = parseFloat(document.getElementById('txtChamfer').value);
             
-            var fDia = !document.getElementById('txtFlangeDia').disabled ? parseFloat(document.getElementById('txtFlangeDia').value) : 0;
-            var fThick = !document.getElementById('txtFlangeThick').disabled ? parseFloat(document.getElementById('txtFlangeThick').value) : 0;
+            var inputFDia = !document.getElementById('txtFlangeDia').disabled ? parseFloat(document.getElementById('txtFlangeDia').value) : 0;
+            var inputFThick = !document.getElementById('txtFlangeThick').disabled ? parseFloat(document.getElementById('txtFlangeThick').value) : 0;
 
-            // Guardrails
-            if (isNaN(od) || isNaN(id) || isNaN(stock) || isNaN(drill) || isNaN(len) || isNaN(chamf)) {
-                alert("Error: Please check inputs. Dimensions must be numeric."); return;
+            // Guardrails Check
+            if (isNaN(inputOD) || isNaN(inputID) || isNaN(inputStock) || isNaN(inputDrill) || isNaN(inputLength) || isNaN(inputChamfer)) {
+                alert("Error: Ensure all values contain numbers."); return;
             }
-            if (od <= 0 || id <= 0 || stock <= 0 || drill <= 0 || len <= 0 || chamf < 0) {
-                alert("All standard dimensions must be greater than zero."); return;
+            if (inputOD <= 0 || inputID <= 0 || inputStock <= 0 || inputDrill <= 0 || inputLength <= 0 || inputChamfer < 0) {
+                alert("Dimensions must be greater than zero."); return;
             }
-            if (id >= od) { alert("Inside Diameter cannot exceed Outside Diameter."); return; }
-            if (drill >= id) { alert("Drill Diameter must be smaller than the finished internal hole."); return; }
-            if (chamf >= (od - id) / 2.0) { alert("Chamfer is too large for this wall thickness."); return; }
+            if (inputID >= inputOD) { alert("Inside Diameter cannot exceed Outside Diameter."); return; }
+            if (inputDrill >= inputID) { alert("Drill Diameter must be smaller than the finished internal hole."); return; }
+            if (inputChamfer >= (inputOD - inputID) / 2.0) { alert("Chamfer is too large for this wall thickness."); return; }
 
-            if (type === "Flanged Bushing") {
-                if (fDia <= od) { alert("CRITICAL ERROR: Flange Diameter must be larger than Bushing OD."); return; }
-                if (fThick >= len) { alert("CRITICAL ERROR: Flange Thickness cannot exceed Total Length."); return; }
-                if (stock < fDia) { alert("CRITICAL ERROR: Raw Stock must be equal to or larger than Flange Diameter."); return; }
+            if (inputType === "Flanged Bushing") {
+                if (inputFDia <= inputOD) { alert("Flange Diameter must be larger than Bushing OD."); return; }
+                if (inputFThick >= inputLength) { alert("Flange Thickness cannot exceed Total Length."); return; }
+                if (inputStock < inputFDia) { alert("Raw Stock must be equal to or larger than Flange Diameter."); return; }
             } else {
-                if (stock < od) { alert("CRITICAL ERROR: Raw Stock must be equal to or larger than Target OD."); return; }
+                if (inputStock < inputOD) { alert("Raw Stock must be equal to or larger than Target OD."); return; }
             }
 
-            // Macro Variable Blueprint Text Generation
+            // Clean string creation logic block
             var sb = "%\nO1007 (FANUC VARIABLE BUSHING);\n";
             sb += "(-----------------------------------------);\n";
-            sb += "(TYPE: " + type.toUpperCase() + ");\n";
-            sb += "#101 = " + od.toFixed(3) + "  (TARGET OUTSIDE DIA - OD)\n";
-            sb += "#102 = " + id.toFixed(3) + "  (TARGET INSIDE DIA - ID)\n";
-            sb += "#103 = " + stock.toFixed(3) + "  (RAW STOCK DIA)\n";
-            sb += "#104 = " + drill.toFixed(3) + "  (U-DRILL DIA)\n";
-            sb += "#105 = " + len.toFixed(3) + "  (TOTAL BUSHING LENGTH)\n";
-            sb += "#106 = " + chamf.toFixed(3) + "  (45-DEGREE CHAMFER SIZE)\n";
-            if (type === "Flanged Bushing") {
-                sb += "#107 = " + fDia.toFixed(3) + "  (FLANGE DIA)\n";
-                sb += "#108 = " + fThick.toFixed(3) + "  (FLANGE THICKNESS)\n";
+            sb += "(TYPE: " + inputType.toUpperCase() + ");\n";
+            sb += "#101 = " + inputOD.toFixed(3) + "  (TARGET OUTSIDE DIA - OD)\n";
+            sb += "#102 = " + inputID.toFixed(3) + "  (TARGET INSIDE DIA - ID)\n";
+            sb += "#103 = " + inputStock.toFixed(3) + "  (RAW STOCK DIA)\n";
+            sb += "#104 = " + inputDrill.toFixed(3) + "  (U-DRILL DIA)\n";
+            sb += "#105 = " + inputLength.toFixed(3) + "  (TOTAL BUSHING LENGTH)\n";
+            sb += "#106 = " + inputChamfer.toFixed(3) + "  (45-DEGREE CHAMFER SIZE)\n";
+            if (inputType === "Flanged Bushing") {
+                sb += "#107 = " + inputFDia.toFixed(3) + "  (FLANGE DIA)\n";
+                sb += "#108 = " + inputFThick.toFixed(3) + "  (FLANGE THICKNESS)\n";
             }
             sb += "(-----------------------------------------);\n\n";
             
@@ -175,7 +175,7 @@
             sb += "G71 U2.0 R0.5;\n";
             sb += "G71 P10 Q20 U0.4 W0.1 F0.25 (ROUGH CYCLE SELECTION);\n";
             
-            if (type === "Plain Bushing") {
+            if (inputType === "Plain Bushing") {
                 sb += "N10 G00 G42 X[#101 - [2.0 * #106]];\n";
                 sb += "G01 Z0.0 F0.15;\n";
                 sb += "X#101 Z-[#106];\n";
@@ -202,16 +202,14 @@
 
             // TOOL 7: Spot Drilling (T0707)
             sb += "(--- TOOL 7: SPOT DRILLING ---);\n";
-            sb += "T0707;\nG97 S1200 M03 (FIXED RPM FOR CENTER PREP);\n";
+            sb += "T0707;\nG97 S1200 M03 (FIXED RPM);\n";
             sb += "G00 X0.0 Z3.0 M08;\n";
-            sb += "G01 Z-4.0 F0.08 (SPOT ENGAGEMENT);\n";
+            sb += "G01 Z-4.0 F0.08;\n";
             sb += "G00 Z3.0;\n";
             sb += "G28 U0.0 W0.0 M09;\nM05;\n\n";
 
             // TOOL 8: U-Drilling (T0808)
             sb += "(--- TOOL 8: U-DRILLING ---);\n";
-            sb += "T0808;\nG97 S1000 M03 (FIXED RPM DRILLING);\n";
+            sb += "T0808;\nG97 S1000 M03;\n";
             sb += "G00 X0.0 Z5.0 M08;\n";
             sb += "G74 R1.0;\n";
-            sb += "G74 Z-[#105 + 3.0] Q5000 F0.1 (G74 PECK CORE);\n";
-            sb += "G00 Z5.0;\n";
