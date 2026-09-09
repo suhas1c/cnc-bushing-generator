@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNC Speeds & Feeds Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f6f9;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .panel {
+            flex: 1;
+            min-width: 320px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .form-row {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-calc { background-color: #28a745; }
+        .result-box {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            border-left: 5px solid #28a745;
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        textarea {
+            width: 100%;
+            height: 180px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            padding: 10px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" style="display: inline-block; margin-bottom: 15px; font-weight: bold; color: #0056b3; text-decoration: none;">← Back to Dashboard Hub</a>
+    <h1 style="color: #28a745;">📊 CNC Speeds & Feeds Engine</h1>
+
+    <div class="container">
+        <!-- LEFT INPUT PANEL -->
+        <div class="panel">
+            <h2>Machining Inputs</h2>
+            
+            <div class="form-row">
+                <label>Operation Type:</label>
+                <select id="cmbOpType">
+                    <option value="Milling">Milling / VMC</option>
+                    <option value="Turning">Lathe Turning</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label>Workpiece Material Presets:</label>
+                <select id="cmbMaterial" onchange="applyMaterialPreset()">
+                    <option value="custom">Custom (Type SFM/IPT Below)</option>
+                    <option value="aluminum" selected>Aluminum (SFM: 800, IPT: 0.006)</option>
+                    <option value="mildsteel">Mild Steel (SFM: 350, IPT: 0.004)</option>
+                    <option value="stainless">Stainless Steel (SFM: 150, IPT: 0.003)</option>
+                    <option value="castiron">Cast Iron (SFM: 250, IPT: 0.005)</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label>Tool / Part Diameter (mm):</label>
+                <input type="number" id="txtDia" value="12.0" step="0.1">
+            </div>
+
+            <div class="form-row">
+                <label>Cutting Speed (SFM - Surface Feet Per Min):</label>
+                <input type="number" id="txtSFM" value="800">
+            </div>
+
+            <div class="form-row">
+                <label>Feed Per Tooth / Rev (IPT / IPR):</label>
+                <input type="number" id="txtIPT" value="0.006" step="0.001">
+            </div>
+
+            <div class="form-row">
+                <label>Number of Flutes / Teeth (Milling Only):</label>
+                <input type="number" id="txtFlutes" value="4">
+            </div>
+
+            <button class="btn-calc" onclick="calculateSpeedsFeeds()">Calculate Parameters</button>
+        </div>
+
+        <!-- RIGHT OUTPUT PANEL -->
+        <div class="panel">
+            <h2>Calculated Parameters</h2>
+            
+            <div class="result-box">
+                <div class="result-row"><span>Spindle Speed (RPM):</span><span id="lblRPM">0</span></div>
+                <div class="result-row"><span>Feed Rate:</span><span id="lblFeed">0</span></div>
+                <div class="result-row"><span>Metric Surface Speed (SMM):</span><span id="lblSMM">0</span></div>
+            </div>
+
+            <h2 style="margin-top: 25px;">Fanuc CNC Code Blocks</h2>
+            <textarea id="txtGCode" readonly placeholder="Calculated Fanuc data blocks will generate here..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        // Preset Databank mapping standard surface speeds and chip loads
+        var presets = {
+            aluminum: { sfm: 800, ipt: 0.006 },
+            mildsteel: { sfm: 350, ipt: 0.004 },
+            stainless: { sfm: 150, ipt: 0.003 },
+            castiron: { sfm: 250, ipt: 0.005 }
+        };
+
+        function applyMaterialPreset() {
+            var choice = document.getElementById('cmbMaterial').value;
+            if (choice !== "custom") {
+                document.getElementById('txtSFM').value = presets[choice].sfm;
+                document.getElementById('txtIPT').value = presets[choice].ipt;
+            }
+        }
+
+        function calculateSpeedsFeeds() {
+            var opType = document.getElementById('cmbOpType').value;
+            var dia = parseFloat(document.getElementById('txtDia').value);
+            var sfm = parseFloat(document.getElementById('txtSFM').value);
+            var ipt = parseFloat(document.getElementById('txtIPT').value);
+            var flutes = parseInt(document.getElementById('txtFlutes').value);
+
+            if (isNaN(dia) || isNaN(sfm) || isNaN(ipt) || dia <= 0 || sfm <= 0 || ipt <= 0) {
+                alert("Error: Please check inputs. Dimensions must be greater than zero."); 
+                return;
+            }
+
+            // RPM Math (Converts metric diameter to inches dynamically via / 25.4)
+            var rpm = (sfm * 3.82) / (dia / 25.4); 
+            rpm = Math.round(rpm);
+
+            // SMM Math
+            var smm = Math.round(sfm * 0.3048);
+
+            var feedRate = 0;
+            var codeBlock = "";
+
+            if (opType === "Milling") {
+                // Milling Feed Rate = RPM * Flutes * (Inch Chip Load * 25.4 to output metric mm/min)
+                feedRate = Math.round(rpm * flutes * (ipt * 25.4));
+                document.getElementById('lblFeed').innerText = feedRate + " mm/min (G94)";
+                
+                // PERFECTLY FIXED: Replaced loose template variables with clean concat operators
+                codeBlock += "(--- FANUC VMC MILLING BLOCK ---);\n";
+                codeBlock += "G90 G94 G21 (ABS, FEED PER MIN, MM);\n";
+                codeBlock += "S" + rpm + " M03 (START SPINDLE);\n";
+                codeBlock += "G01 X0.0 Y0.0 F" + feedRate + " (LINEAR CUT);\n";
+            } else {
+                // Lathe Turning Feed Rate = Feed per rev directly (IPR * 25.4 to output metric mm/rev)
+                feedRate = (ipt * 25.4).toFixed(3);
+                document.getElementById('lblFeed').innerText = feedRate + " mm/rev (G99)";
+                
+                // PERFECTLY FIXED: Replaced loose template variables with clean concat operators
+                codeBlock += "(--- FANUC LATHE TURNING BLOCK ---);\n";
+                codeBlock += "G18 G21 G99 (PLAN, MM, FEED PER REV);\n";
+                codeBlock += "G50 S2500 (MAX RPM LIMIT);\n";
+                codeBlock += "G96 S" + smm + " M03 (CONSTANT SURFACE SPEED);\n";
+                codeBlock += "G01 Z-50.0 F" + feedRate + " (TURN CUT);\n";
+            }
+
+            // Output values directly back to screen elements
+            document.getElementById('lblRPM').innerText = rpm;
+            document.getElementById('lblSMM').innerText = smm + " m/min";
+            document.getElementById('txtGCode').value = codeBlock;
+        }
+    </script>
+</body>
+</html>

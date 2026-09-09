@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHS CNC Machining Toolbox Hub</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: #0056b3;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header h1 { margin: 0; font-size: 28px; }
+        .header p { margin: 5px 0 0 0; opacity: 0.9; font-size: 16px; }
+        
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-top: 5px solid #ccc;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+        .card.turning { border-top-color: #0056b3; }
+        .card.milling { border-top-color: #ffc107; }
+        .card.calculator { border-top-color: #28a745; }
+        
+        .card h2 { margin-top: 0; color: #333; font-size: 22px; }
+        .card p { color: #666; font-size: 15px; line-height: 1.4; margin-bottom: 20px; }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .btn-turning { background-color: #0056b3; }
+        .btn-turning:hover { background-color: #004085; }
+        .btn-milling { background-color: #e0a800; color: #212529; }
+        .btn-milling:hover { background-color: #c69500; }
+        .btn-calc { background-color: #28a745; }
+        .btn-calc:hover { background-color: #218838; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>GHS CNC Machining Toolbox Hub</h1>
+        <p>Production-Ready G-Code Generators & Calculators</p>
+    </div>
+
+    <div class="grid-container">
+        <!-- TURNING CARD -->
+        <div class="card turning">
+            <div>
+                <h2>⚡ Lathe Turning Center</h2>
+                <p>Generate parametric Fanuc lathe toolpaths using G71 roughing cycles, G70 finish sweeps, and shop tooling configurations.</p>
+            </div>
+            <a href="turning-bushing.html" class="btn btn-turning">Open Turning Tools</a>
+        </div>
+
+        <!-- MILLING CARD -->
+        <div class="card milling">
+            <div>
+                <h2>🌀 VMC Milling Center</h2>
+                <p>Generate absolute coordinate arrays for vertical machining centers, including G12/G13 pocketing and bolt-hole circle grids.</p>
+            </div>
+            <a href="mill-bolthole.html" class="btn btn-milling">Open Milling Tools</a>
+        </div>
+
+        <!-- CALCULATORS CARD -->
+        <div class="card calculator">
+            <div>
+                <h2>📊 Speeds & Feeds Engine</h2>
+                <p>Instantly calculate required spindle speeds (RPM), surface speeds (SFM/SMM), and chip load feed rates for diverse tooling materials.</p>
+            </div>
+            <a href="speeds-feeds.html" class="btn btn-calc">Open Speeds & Feeds</a>
+        </div>
+    </div>
+
+</body>
+</html>
