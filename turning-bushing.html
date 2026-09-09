@@ -129,6 +129,9 @@
             var fThick = !document.getElementById('txtFlangeThick').disabled ? parseFloat(document.getElementById('txtFlangeThick').value) : 0;
 
             // Guardrails
+            if (isNaN(od) || isNaN(id) || isNaN(stock) || isNaN(drill) || isNaN(len) || isNaN(chamf)) {
+                alert("All standard dimensions must be valid numeric values."); return;
+            }
             if (od <= 0 || id <= 0 || stock <= 0 || drill <= 0 || len <= 0 || chamf < 0) {
                 alert("All standard dimensions must be greater than zero."); return;
             }
@@ -144,9 +147,8 @@
                 if (stock < od) { alert("Raw Stock must be equal to or larger than Target OD."); return; }
             }
 
-            // Calculations with forced decimal placement formats
+            // Standard Floating Coordinate Geometry Formats
             var approachStockX = (stock + 2.0).toFixed(3);
-            var clearanceStockX = (stock + 4.0).toFixed(3);
             var odChamfStart = (od - (2.0 * chamf)).toFixed(3);
             var targetOD = od.toFixed(3);
             var targetID = id.toFixed(3);
@@ -157,7 +159,7 @@
             var stepLength = (len - fThick).toFixed(3);
             var formattedFlangeDia = fDia.toFixed(3);
 
-            // Standard G-code construction engine
+            // G-code compilation layout
             var sb = "%\nO1007 (WEB BUSHING ENGINE);\n";
             sb += "(TYPE: " + type.toUpperCase() + ");\n";
             sb += "(OD: " + targetOD + "mm, ID: " + targetID + "mm, STOCK: " + stock.toFixed(3) + "mm, LENGTH: " + totalLen + "mm);\n";
@@ -213,5 +215,3 @@
             sb += "G00 X" + targetDrill + " Z2.0 M08;\n\n";
             sb += "G71 U1.5 R0.5;\nG71 P30 Q40 U-0.4 W0.05 F0.2;\n";
             
-            var idChamfStart = (id + (2.0 * chamf)).toFixed(3);
-            sb += "N30 G00 G41 X" + idChamfStart + ";\nG01 Z0.0 F0.1;\n";
