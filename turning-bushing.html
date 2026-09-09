@@ -130,6 +130,9 @@
             var fThick = !document.getElementById('txtFlangeThick').disabled ? parseFloat(document.getElementById('txtFlangeThick').value) : 0;
 
             // Guardrails
+            if (isNaN(od) || isNaN(id) || isNaN(stock) || isNaN(drill) || isNaN(len) || isNaN(chamf)) {
+                alert("Error: Please check inputs. Dimensions must be numeric."); return;
+            }
             if (od <= 0 || id <= 0 || stock <= 0 || drill <= 0 || len <= 0 || chamf < 0) {
                 alert("All standard dimensions must be greater than zero."); return;
             }
@@ -138,14 +141,14 @@
             if (chamf >= (od - id) / 2.0) { alert("Chamfer is too large for this wall thickness."); return; }
 
             if (type === "Flanged Bushing") {
-                if (fDia <= od) { alert("Flange Diameter must be larger than Bushing OD."); return; }
-                if (fThick >= len) { alert("Flange Thickness cannot exceed Total Length."); return; }
-                if (stock < fDia) { alert("Raw Stock must be equal to or larger than Flange Diameter."); return; }
+                if (fDia <= od) { alert("CRITICAL ERROR: Flange Diameter must be larger than Bushing OD."); return; }
+                if (fThick >= len) { alert("CRITICAL ERROR: Flange Thickness cannot exceed Total Length."); return; }
+                if (stock < fDia) { alert("CRITICAL ERROR: Raw Stock must be equal to or larger than Flange Diameter."); return; }
             } else {
-                if (stock < od) { alert("Raw Stock must be equal to or larger than Target OD."); return; }
+                if (stock < od) { alert("CRITICAL ERROR: Raw Stock must be equal to or larger than Target OD."); return; }
             }
 
-            // FIXED: Standard safe string structures throughout
+            // Macro Variable Blueprint Text Generation
             var sb = "%\nO1007 (FANUC VARIABLE BUSHING);\n";
             sb += "(-----------------------------------------);\n";
             sb += "(TYPE: " + type.toUpperCase() + ");\n";
@@ -212,9 +215,3 @@
             sb += "G74 R1.0;\n";
             sb += "G74 Z-[#105 + 3.0] Q5000 F0.1 (G74 PECK CORE);\n";
             sb += "G00 Z5.0;\n";
-            sb += "G28 U0.0 W0.0 M09;\nM05;\n\n";
-
-            // TOOL 9: ID Boring Bar (T0909)
-            sb += "(--- TOOL 9: ID BORING BAR ---);\n";
-            sb += "T0909;\nG50 S2000;\nG96 S150 M03;\n";
-            sb += "G00 X" + drill + " Z2.0 M08 (RAPID POSITION INSIDE CORE);\n\n";
