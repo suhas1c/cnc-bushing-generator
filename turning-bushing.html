@@ -61,14 +61,13 @@
         .btn-dl { background-color: #28a745; }
         textarea {
             width: 100%;
-            height: 520px;
+            height: 480px;
             font-family: 'Courier New', Courier, monospace;
             font-size: 13px;
             padding: 10px;
             background-color: #1e1e1e;
             color: #d4d4d4;
             box-sizing: border-box;
-            resize: vertical;
         }
     </style>
 </head>
@@ -99,14 +98,14 @@
             <div class="form-row"><label>Flange Dia (mm):</label><input type="number" id="txtFlangeDia" value="60.0" disabled></div>
             <div class="form-row"><label>Flange Thickness (mm):</label><input type="number" id="txtFlangeThick" value="12.0" disabled></div>
 
-            <button class="btn-gen" onclick="runGenerator()">Generate Shop-Tool Macro</button>
+            <button class="btn-gen" onclick="runGenerator()">Generate G-Code</button>
             <button class="btn-dl" onclick="downloadNC()">Download .NC File</button>
         </div>
 
         <!-- RIGHT PREVIEW PANEL -->
         <div class="panel">
-            <h2>Live Macro G-Code Preview</h2>
-            <textarea id="txtPreview" readonly placeholder="Your macro program with specific tooling routes will appear here..."></textarea>
+            <h2>Live G-Code Preview</h2>
+            <textarea id="txtPreview" readonly placeholder="Your G-code will appear here..."></textarea>
         </div>
     </div>
 
@@ -130,11 +129,8 @@
             var fThick = !document.getElementById('txtFlangeThick').disabled ? parseFloat(document.getElementById('txtFlangeThick').value) : 0;
 
             // Guardrails
-            if (isNaN(od) || isNaN(id) || isNaN(stock) || isNaN(drill) || isNaN(len) || isNaN(chamf)) {
-                alert("Error: All inputs must contain valid numbers."); return;
-            }
             if (od <= 0 || id <= 0 || stock <= 0 || drill <= 0 || len <= 0 || chamf < 0) {
-                alert("Dimensions must be greater than zero."); return;
+                alert("All standard dimensions must be greater than zero."); return;
             }
             if (id >= od) { alert("Inside Diameter cannot exceed Outside Diameter."); return; }
             if (drill >= id) { alert("Drill Diameter must be smaller than the finished internal hole."); return; }
@@ -148,45 +144,29 @@
                 if (stock < od) { alert("Raw Stock must be equal to or larger than Target OD."); return; }
             }
 
-            // Macro Blueprint String Assembly Engine
-            var sb = "%\nO1007 (FANUC VARIABLE BUSHING);\n";
-            sb += "(-----------------------------------------);\n";
-            sb += "(TYPE: " + type.toUpperCase() + ")\n";
-            sb += "#101 = " + od.toFixed(3) + "  (TARGET OUTSIDE DIA - OD)\n";
-            sb += "#102 = " + id.toFixed(3) + "  (TARGET INSIDE DIA - ID)\n";
-            sb += "#103 = " + stock.toFixed(3) + "  (RAW STOCK DIA)\n";
-            sb += "#104 = " + drill.toFixed(3) + "  (U-DRILL DIA)\n";
-            sb += "#105 = " + len.toFixed(3) + "  (TOTAL BUSHING LENGTH)\n";
-            sb += "#106 = " + chamf.toFixed(3) + "  (45-DEGREE CHAMFER SIZE)\n";
+            // Standard G-code construction engine
+            var sb = "%\nO1007 (WEB BUSHING ENGINE);\n";
+            sb += "(TYPE: " + type.toUpperCase() + ");\n";
+            sb += "(OD: " + od + "mm, ID: " + id + "mm, STOCK: " + stock + "mm, LENGTH: " + len + "mm);\n";
             if (type === "Flanged Bushing") {
-                sb += "#107 = " + fDia.toFixed(3) + "  (FLANGE DIA)\n";
-                sb += "#108 = " + fThick.toFixed(3) + "  (FLANGE THICKNESS)\n";
+                sb += "(FLANGE DIA: " + fDia + "mm, FLANGE THICKNESS: " + fThick + "mm);\n";
             }
-            sb += "(-----------------------------------------);\n\n";
-            
             sb += "G18 G21 G40 G99 G54;\n\n";
             
             // TOOL 1: OD Rough Turning (T0101)
             sb += "(--- TOOL 1: OD ROUGH TURNING ---);\n";
             sb += "T0101;\nG50 S2000;\nG96 S180 M03;\n";
-            sb += "G00 X[#103 + 2.0] Z2.0 M08;\n";
-            sb += "G01 Z0.0 F0.25;\nX-1.6 F0.15;\nG00 X[#103 + 2.0] Z2.0;\n\n";
+            sb += "G00 X" + (stock + 2.0) + " Z2.0 M08;\n";
+            sb += "G01 Z0.0 F0.25;\nX-1.6 F0.15;\nG00 X" + (stock + 2.0) + " Z2.0;\n\n";
             sb += "G71 U2.0 R0.5;\nG71 P10 Q20 U0.4 W0.1 F0.25;\n";
             
+            var odChamfStart = od - (2.0 * chamf);
             if (type === "Plain Bushing") {
-                sb += "N10 G00 G42 X[#101 - [2.0 * #106]];\n";
-                sb += "G01 Z0.0 F0.15;\n";
-                sb += "X#101 Z-[#106];\n";
-                sb += "Z-[#105];\n";
-                sb += "X[#103 + 2.0];\n";
+                sb += "N10 G00 G42 X" + odChamfStart + ";\nG01 Z0.0 F0.15;\n";
+                sb += "X" + od + " Z-" + chamf + ";\nZ-" + len + ";\nX" + (stock + 2.0) + ";\n";
             } else {
-                sb += "N10 G00 G42 X[#101 - [2.0 * #106]];\n";
-                sb += "G01 Z0.0 F0.15;\n";
-                sb += "X#101 Z-[#106];\n";
-                sb += "Z-[#105 - #108];\n";
-                sb += "X#107;\n";
-                sb += "Z-[#105];\n";
-                sb += "X[#103 + 2.0];\n";
+                sb += "N10 G00 G42 X" + odChamfStart + ";\nG01 Z0.0 F0.15;\n";
+                sb += "X" + od + " Z-" + chamf + ";\nZ-" + (len - fThick) + ";\nX" + fDia + ";\nZ-" + len + ";\nX" + (stock + 2.0) + ";\n";
             }
             sb += "N20 G00 G40 Z2.0;\n";
             sb += "G28 U0.0 W0.0 M09;\nM05;\n\n";
@@ -194,7 +174,7 @@
             // TOOL 2: OD Finish Turning (T0202)
             sb += "(--- TOOL 2: OD FINISH TURNING ---);\n";
             sb += "T0202;\nG50 S2200;\nG96 S220 M03;\n";
-            sb += "G00 X[#103 + 2.0] Z2.0 M08;\n";
+            sb += "G00 X" + (stock + 2.0) + " Z2.0 M08;\n";
             sb += "G70 P10 Q20 F0.12;\n";
             sb += "G28 U0.0 W0.0 M09;\nM05;\n\n";
 
@@ -211,12 +191,33 @@
             sb += "T0808;\nG97 S1000 M03;\n";
             sb += "G00 X0.0 Z5.0 M08;\n";
             sb += "G74 R1.0;\n";
-            sb += "G74 Z-[#105 + 3.0] Q5000 F0.1;\n";
+            sb += "G74 Z-" + (len + 3.0) + " Q5000 F0.1;\n";
             sb += "G00 Z5.0;\n";
             sb += "G28 U0.0 W0.0 M09;\nM05;\n\n";
 
             // TOOL 9: ID Boring Bar (T0909)
             sb += "(--- TOOL 9: ID BORING BAR ---);\n";
             sb += "T0909;\nG50 S2000;\nG96 S150 M03;\n";
-            sb += "G00 X#104 Z2.0 M08;\n\n";
+            sb += "G00 X" + drill + " Z2.0 M08;\n\n";
             sb += "G71 U1.5 R0.5;\nG71 P30 Q40 U-0.4 W0.05 F0.2;\n";
+            
+            var idChamfStart = id + (2.0 * chamf);
+            sb += "N30 G00 G41 X" + idChamfStart + ";\nG01 Z0.0 F0.1;\n";
+            sb += "X" + id + " Z-" + chamf + ";\nZ-" + len + ";\nX" + drill + ";\n";
+            sb += "N40 G00 G40 Z2.0;\n\nG70 P30 Q40 F0.1;\nG28 U0.0 W0.0 M09;\nM05;\nM30;\n%\n";
+
+            document.getElementById('txtPreview').value = sb;
+        }
+
+        function downloadNC() {
+            var text = document.getElementById('txtPreview').value;
+            if (!text) { alert("Generate G-code first!"); return; }
+            var blob = new Blob([text], { type: "text/plain" });
+            var link = document.createElement("a");
+            link.download = "BushingBore_ShopT.nc";
+            link.href = window.URL.createObjectURL(blob);
+            link.click();
+        }
+    </script>
+</body>
+</html>
