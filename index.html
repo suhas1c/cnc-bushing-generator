@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal Fanuc CNC Bushing Generator</title>
+    <title>CNC Lathe Bushing Generator</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; }
         .container { display: flex; flex-wrap: wrap; gap: 20px; max-width: 1100px; margin: 0 auto; }
@@ -12,8 +11,7 @@
         label { display: block; font-weight: bold; font-size: 14px; margin-bottom: 4px; }
         input, select { width: 100%; padding: 8px; font-size: 15px; font-weight: bold; border: 2px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         button { width: 100%; padding: 12px; font-size: 16px; font-weight: bold; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; background-color: #0056b3; }
-        button:hover { background-color: #004085; }
-        textarea { width: 100%; height: 480px; font-family: 'Courier New', Courier, monospace; font-size: 13px; padding: 10px; background-color: #1e1e1e; color: #d4d4d4; box-sizing: border-box; }
+        textarea { width: 100%; height: 500px; font-family: 'Courier New', Courier, monospace; font-size: 13px; padding: 10px; background-color: #1e1e1e; color: #d4d4d4; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -21,121 +19,143 @@
     <h1 style="text-align: center; color: #0056b3;">Universal Fanuc Lathe Bushing Generator</h1>
 
     <div class="container">
-        <!-- LEFT INPUT PANEL -->
+        <!-- INPUT BOXES -->
         <div class="panel">
             <h2>Parameters</h2>
-            
             <div class="form-row">
                 <label>Bushing Type:</label>
-                <select id="bushingType">
+                <select id="boxType" onchange="toggleFlange()">
                     <option value="plain">Plain Bushing</option>
                     <option value="flanged">Flanged Bushing</option>
                 </select>
             </div>
-
-            <div class="form-row"><label>Target OD (mm):</label><input type="number" id="valOD" value="40.000"></div>
-            <div class="form-row"><label>Target ID (mm):</label><input type="number" id="valID" value="20.000"></div>
-            <div class="form-row"><label>Raw Stock Dia (mm):</label><input type="number" id="valStock" value="65.000"></div>
-            <div class="form-row"><label>U-Drill Dia (mm):</label><input type="number" id="valDrill" value="18.000"></div>
-            <div class="form-row"><label>Total Length (mm):</label><input type="number" id="valLength" value="50.000"></div>
-            <div class="form-row"><label>45-Deg Chamfer (mm):</label><input type="number" id="valChamfer" value="1.500"></div>
-            <div class="form-row"><label>Flange Dia (mm):</label><input type="number" id="valFlangeDia" value="60.000"></div>
-            <div class="form-row"><label>Flange Thickness (mm):</label><input type="number" id="valFlangeThick" value="12.000"></div>
-
-            <button onclick="buildProgram()">Generate G-Code</button>
+            <div class="form-row"><label>Target OD (mm):</label><input type="number" id="boxOD" value="40.0" step="0.001"></div>
+            <div class="form-row"><label>Target ID (mm):</label><input type="number" id="boxID" value="20.0" step="0.001"></div>
+            <div class="form-row"><label>Raw Stock Dia (mm):</label><input type="number" id="boxStock" value="65.0" step="0.001"></div>
+            <div class="form-row"><label>U-Drill Dia (mm):</label><input type="number" id="boxDrill" value="18.0" step="0.001"></div>
+            <div class="form-row"><label>Total Length (mm):</label><input type="number" id="boxLength" value="50.0" step="0.001"></div>
+            <div class="form-row"><label>45-Deg Chamfer (mm):</label><input type="number" id="boxChamfer" value="1.5" step="0.001"></div>
+            <div class="form-row"><label>Flange Dia (mm):</label><input type="number" id="boxFlangeDia" value="60.0" step="0.001" disabled></div>
+            <div class="form-row"><label>Flange Thickness (mm):</label><input type="number" id="boxFlangeThick" value="12.0" step="0.001" disabled></div>
+            
+            <button onclick="generateGCode()">Generate G-Code</button>
         </div>
-
-        <!-- RIGHT PREVIEW PANEL -->
+        
+        <!-- PREVIEW WINDOW -->
         <div class="panel">
             <h2>Live G-Code Preview</h2>
-            <textarea id="outputConsole" readonly placeholder="G-code data will print here..."></textarea>
+            <textarea id="boxPreview" readonly placeholder="Your G-code will print here..."></textarea>
         </div>
     </div>
 
     <script>
-        function buildProgram() {
-            // Read direct values
-            var pType = document.getElementById("bushingType").value;
-            var numOD = parseFloat(document.getElementById("valOD").value);
-            var numID = parseFloat(document.getElementById("valID").value);
-            var numStock = parseFloat(document.getElementById("valStock").value);
-            var numDrill = parseFloat(document.getElementById("valDrill").value);
-            var numLength = parseFloat(document.getElementById("valLength").value);
-            var numChamfer = parseFloat(document.getElementById("valChamfer").value);
-            var numFDia = parseFloat(document.getElementById("valFlangeDia").value);
-            var numFThick = parseFloat(document.getElementById("valFlangeThick").value);
+        function toggleFlange() {
+            var isFlanged = document.getElementById("boxType").value === "flanged";
+            document.getElementById("boxFlangeDia").disabled = !isFlanged;
+            document.getElementById("boxFlangeThick").disabled = !isFlanged;
+        }
 
-            // Force exact Fanuc formatting to prevent micron scale issues
-            var stockX = (numStock + 2.0).toFixed(3);
-            var chStart = (numOD - (2.0 * numChamfer)).toFixed(3);
-            var finalOD = numOD.toFixed(3);
-            var finalID = numID.toFixed(3);
-            var finalDrill = numDrill.toFixed(3);
-            var chSize = numChamfer.toFixed(3);
-            var totalZ = numLength.toFixed(3);
-            var drillDepth = (numLength + 3.0).toFixed(3);
-            var stepZ = (numLength - numFThick).toFixed(3);
-            var flDia = numFDia.toFixed(3);
+        // Smart CNC math formatter helper
+        function fmt(val) {
+            var num = parseFloat(val.toFixed(3));
+            var str = num.toString();
+            if (str.indexOf('.') === -1) {
+                return str + '.';
+            }
+            return str;
+        }
 
-            // Assemble code blocks using simple text combining
-            var output = "%\nO1007 (FANUC LATHE BUSHING);\n";
-            output = output + "(OD: " + finalOD + "mm, ID: " + finalID + "mm, LENGTH: " + totalZ + "mm);\n";
-            output = output + "G18 G21 G40 G99 G54;\n\n";
-            
-            // Tool 1
-            output = output + "(--- TOOL 1: OD ROUGH TURNING ---);\n";
-            output = output + "T0101;\nG50 S2000;\nG96 S180 M03;\n";
-            output = output + "G00 X" + stockX + " Z2.000 M08;\n";
-            output = output + "G01 Z0.000 F0.25;\nX-1.600 F0.15;\nG00 X" + stockX + " Z2.000;\n\n";
-            output = output + "G71 U2.000 R0.500;\nG71 P10 Q20 U0.400 W0.100 F0.25;\n";
+        function generateGCode() {
+            var pType = document.getElementById("boxType").value;
+            var valOD = parseFloat(document.getElementById("boxOD").value);
+            var valID = parseFloat(document.getElementById("boxID").value);
+            var valStock = parseFloat(document.getElementById("boxStock").value);
+            var valDrill = parseFloat(document.getElementById("boxDrill").value);
+            var valLength = parseFloat(document.getElementById("boxLength").value);
+            var valChamfer = parseFloat(document.getElementById("boxChamfer").value);
+            var valFDia = parseFloat(document.getElementById("boxFlangeDia").value);
+            var valFThick = parseFloat(document.getElementById("boxFlangeThick").value);
+
+            if (valID >= valOD) { alert("Error: ID cannot be larger than OD!"); return; }
+            if (valDrill >= valID) { alert("Error: Drill cannot be larger than finished ID!"); return; }
+
+            var txtStockApproach = fmt(valStock + 2.0);
+            var txtChamferStart = fmt(valOD - (2.0 * valChamfer));
+            var txtOD = fmt(valOD);
+            var txtID = fmt(valID);
+            var txtDrill = fmt(valDrill);
+            var txtChamferSize = fmt(valChamfer);
+            var txtLength = fmt(valLength);
+            var txtDrillDepth = fmt(valLength + 3.0);
+            var txtStepZ = fmt(valLength - valFThick);
+            var txtFDia = fmt(valFDia);
+            var txtFThick = fmt(valFThick);
+
+            var txt = "%\nO1007 (WEB BUSHING MACHINE);\n";
             
             if (pType === "plain") {
-                output = output + "N10 G00 G42 X" + chStart + ";\nG01 Z0.000 F0.15;\n";
-                output = output + "X" + finalOD + " Z-" + chSize + ";\nZ-" + totalZ + ";\nX" + stockX + ";\n";
+                txt += "(TYPE: PLAIN BUSHING);\n";
+                txt += "(OD: " + txtOD + "mm, ID: " + txtID + "mm, LENGTH: " + txtLength + "mm);\n";
             } else {
-                output = output + "N10 G00 G42 X" + chStart + ";\nG01 Z0.000 F0.15;\n";
-                output = output + "X" + finalOD + " Z-" + chSize + ";\nZ-" + stepZ + ";\nX" + flDia + ";\nZ-" + totalZ + ";\nX" + stockX + ";\n";
+                txt += "(TYPE: FLANGED BUSHING);\n";
+                txt += "(OD: " + txtOD + "mm, ID: " + txtID + "mm, LENGTH: " + txtLength + "mm);\n";
+                txt += "(FLANGE DIA: " + txtFDia + "mm, THICKNESS: " + txtFThick + "mm);\n";
             }
-            output = output + "N20 G00 G40 Z2.000;\n";
-            output = output + "G28 U0.000 W0.000 M09;\nM05;\n\n";
-
-            // Tool 2
-            output = output + "(--- TOOL 2: OD FINISH TURNING ---);\n";
-            output = output + "T0202;\nG50 S2200;\nG96 S220 M03;\n";
-            output = output + "G00 X" + stockX + " Z2.000 M08;\n";
-            output = output + "G70 P10 Q20 F0.12;\n";
-            output = output + "G28 U0.000 W0.000 M09;\nM05;\n\n";
-
-            // Tool 7
-            output = output + "(--- TOOL 7: SPOT DRILLING ---);\n";
-            output = output + "T0707;\nG97 S1200 M03;\n";
-            output = output + "G00 X0.000 Z3.000 M08;\n";
-            output = output + "G01 Z-4.000 F0.08;\n";
-            output = output + "G00 Z3.000;\n";
-            output = output + "G28 U0.000 W0.000 M09;\nM05;\n\n";
-
-            // Tool 8
-            output = output + "(--- TOOL 8: U-DRILLING ---);\n";
-            output = output + "T0808;\nG97 S1000 M03;\n";
-            output = output + "G00 X0.000 Z5.000 M08;\n";
-            output = output + "G74 R1.000;\n";
-            output = output + "G74 Z-" + drillDepth + " Q5000 F0.10;\n";
-            output = output + "G00 Z5.000;\n";
-            output = output + "G28 U0.000 W0.000 M09;\nM05;\n\n";
-
-            // Tool 9
-            output = output + "(--- TOOL 9: ID BORING BAR ---);\n";
-            output = output + "T0909;\nG50 S2000;\nG96 S150 M03;\n";
-            output = output + "G00 X" + finalDrill + " Z2.000 M08;\n\n";
-            output = output + "G71 U1.500 R0.500;\nG71 P30 Q40 U-0.400 W0.050 F0.20;\n";
             
-            var idChStart = (numID + (2.0 * numChamfer)).toFixed(3);
-            output = output + "N30 G00 G41 X" + idChStart + ";\nG01 Z0.000 F0.10;\n";
-            output = output + "X" + finalID + " Z-" + chSize + ";\nZ-" + totalZ + ";\nX" + finalDrill + ";\n";
-            output = output + "N40 G00 G40 Z2.000;\n\nG70 P30 Q40 F0.10;\nG28 U0.000 W0.000 M09;\nM05;\nM30;\n%\n";
+            txt += "G18 G21 G40 G99 G54;\n\n";
 
-            // Send to console screen
-            document.getElementById("outputConsole").value = output;
+            // TOOL 1
+            txt += "T0101 (OD ROUGH);\n";
+            txt += "G50 S2000;\nG96 S180 M03;\n";
+            txt += "G00 X" + txtStockApproach + " Z2. M08;\n";
+            txt += "G01 Z0. F0.25;\nX-1.6 F0.15;\nG00 X" + txtStockApproach + " Z2.;\n\n";
+            txt += "G71 U2. R0.5;\nG71 P10 Q20 U0.4 W0.1 F0.25;\n";
+
+            if (pType === "plain") {
+                txt += "N10 G00 G42 X" + txtChamferStart + ";\nG01 Z0. F0.15;\n";
+                txt += "X" + txtOD + " Z-" + txtChamferSize + ";\nZ-" + txtLength + ";\nX" + txtStockApproach + ";\n";
+            } else {
+                txt += "N10 G00 G42 X" + txtChamferStart + ";\nG01 Z0. F0.15;\n";
+                txt += "X" + txtOD + " Z-" + txtChamferSize + ";\nZ-" + txtStepZ + ";\nX" + txtFDia + ";\nZ-" + txtLength + ";\nX" + txtStockApproach + ";\n";
+            }
+            txt += "N20 G00 G40 Z2.;\nG28 U0. W0. M09;\nM05;\n\n";
+
+            // TOOL 2
+            txt += "T0202 (OD FINISH);\n";
+            txt += "G50 S2200;\nG96 S220 M03;\n";
+            txt += "G00 X" + txtStockApproach + " Z2. M08;\n";
+            txt += "G70 P10 Q20 F0.12;\n";
+            txt += "G28 U0. W0. M09;\nM05;\n\n";
+
+            // TOOL 7
+            txt += "T0707 (SPOT DRILL);\n";
+            txt += "G97 S1200 M03;\n";
+            txt += "G00 X0. Z3. M08;\n";
+            txt += "G01 Z-4. F0.08;\n";
+            txt += "G00 Z3.;\n";
+            txt += "G28 U0. W0. M09;\nM05;\n\n";
+
+            // TOOL 8
+            txt += "T0808 (U-DRILL);\n";
+            txt += "G97 S1000 M03;\n";
+            txt += "G00 X0. Z5. M08;\n";
+            txt += "G74 R1.;\n";
+            txt += "G74 Z-" + txtDrillDepth + " Q5000 F0.1;\n";
+            txt += "G00 Z5.;\n";
+            txt += "G28 U0. W0. M09;\nM05;\n\n";
+
+            // TOOL 9
+            txt += "T0909 (BORING BAR);\n";
+            txt += "G50 S2000;\nG96 S150 M03;\n";
+            txt += "G00 X" + txtDrill + " Z2. M08;\n\n";
+            txt += "G71 U1.5 R0.5;\nG71 P30 Q40 U-0.4 W0.05 F0.2;\n";
+            
+            var txtBoreChamferStart = fmt(valID + (2.0 * valChamfer));
+            txt += "N30 G00 G41 X" + txtBoreChamferStart + ";\nG01 Z0. F0.1;\n";
+            txt += "X" + txtID + " Z-" + txtChamferSize + ";\nZ-" + txtLength + ";\nX" + txtDrill + ";\n";
+            txt += "N40 G00 G40 Z2.;\n\nG70 P30 Q40 F0.1;\nG28 U0. W0. M09;\nM05;\nM30;\n%\n";
+
+            document.getElementById("boxPreview").value = txt;
         }
     </script>
 </body>
